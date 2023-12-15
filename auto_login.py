@@ -4,16 +4,85 @@ import time
 import random
 import json
 from selenium.webdriver.common.action_chains import ActionChains
+import undetected_chromedriver as uc
+import zipfile
 
 class TelegramLoginTest(BaseCase):
     def setUp(self):
         super(TelegramLoginTest, self).setUp()
-        # Setting a custom user-agent
-        self.driver.execute_cdp_cmd('Network.setUserAgentOverride', {
-            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"
-        })
-        # Adding randomized behavior
+        PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS = self.get_first_proxy()
+        USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"
+        self.driver = self.create_chromedriver(PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS, USER_AGENT)
         self.add_random_behavior()
+
+    def get_first_proxy(self):
+        with open('proxies.txt') as f:
+            proxy = f.readline().strip()
+        return proxy.split(':')
+
+    def create_chromedriver(self, PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS, USER_AGENT):
+        manifest_json = """
+        {
+            "version": "1.0.0",
+            "manifest_version": 2,
+            "name": "Proxy Auth Extension",
+            "permissions": [
+                "proxy",
+                "tabs",
+                "unlimitedStorage",
+                "storage",
+                "<all_urls>",
+                "webRequest",
+                "webRequestBlocking"
+            ],
+            "background": {
+                "scripts": ["background.js"]
+            },
+            "minimum_chrome_version":"22.0.0"
+        }
+        """
+
+        background_js = f"""
+        var config = {{
+            mode: "fixed_servers",
+            rules: {{
+                singleProxy: {{
+                    scheme: "http",
+                    host: "{PROXY_HOST}",
+                    port: parseInt({PROXY_PORT})
+                }},
+                bypassList: ["localhost"]
+            }}
+        }};
+
+        chrome.proxy.settings.set({{value: config, scope: "regular"}}, function() {{}});
+
+        function callbackFn(details) {{
+            return {{
+                authCredentials: {{
+                    username: "{PROXY_USER}",
+                    password: "{PROXY_PASS}"
+                }}
+            }};
+        }}
+
+        chrome.webRequest.onAuthRequired.addListener(
+            callbackFn,
+            {{urls: ["<all_urls>"]}},
+            ['blocking']
+        );
+        """
+
+        pluginfile = 'proxy_auth_plugin.zip'
+        with zipfile.ZipFile(pluginfile, 'w') as zp:
+            zp.writestr("manifest.json", manifest_json)
+            zp.writestr("background.js", background_js)
+
+        options = uc.ChromeOptions()
+        options.add_extension(pluginfile)
+        options.add_argument(f'--user-agent={USER_AGENT}')
+        driver = uc.Chrome(options=options)
+        return driver
 
     def add_random_behavior(self):
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -30,9 +99,16 @@ class TelegramLoginTest(BaseCase):
         self.random_delay()
 
     def save_local_storage(self, path):
-        local_storage = self.driver.execute_script("return JSON.stringify(localStorage);")
-        with open(path, 'w') as file:
-            file.write(local_storage)
+        try:
+            local_storage = self.driver.execute_script("return JSON.stringify(localStorage);")
+            if local_storage:
+                with open(path, 'w') as file:
+                    file.write(local_storage)
+                print("Local storage saved successfully.")
+            else:
+                print("No data in local storage to save.")
+        except Exception as e:
+            print(f"Error saving local storage: {e}")
 
     def load_local_storage(self, path):
         with open(path, 'r') as file:
