@@ -39,6 +39,20 @@ class TelegramLoginTest(BaseCase):
             local_storage = file.read()
         self.driver.execute_script("localStorage.clear(); var data = JSON.parse(arguments[0]); for (var key in data) localStorage.setItem(key, data[key]);", local_storage)
 
+    def search_for_contact(self, contact_name):
+        search_input_selector = ".input-field-input.input-search-input"  # Replace with your selector
+        
+        # Wait for the search input field to be visible and clickable
+        search_input = self.wait_for_element_visible(search_input_selector)
+        
+        # Move the mouse to the search input field and click on it
+        self.human_like_mouse_movement(search_input)
+        search_input.click()
+
+        # Clear any existing text and input 'Niki'
+        search_input.clear()
+        search_input.send_keys(contact_name)
+
     def test_telegram_login(self):
         local_storage_file_path = "local_storage.json"
         self.open('https://web.telegram.org/')
@@ -58,6 +72,8 @@ class TelegramLoginTest(BaseCase):
             self.wait_for_element_visible(chatlist_selector, timeout=600)
             self.save_local_storage(local_storage_file_path)
             print("Local storage saved successfully.")
+
+        self.search_for_contact("@nkrivulev")
 
         input("Press Enter to close the browser...")
 
