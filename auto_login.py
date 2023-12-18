@@ -6,6 +6,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 
 class TelegramLoginTest(BaseCase):
     def setUp(self):
@@ -68,6 +69,19 @@ class TelegramLoginTest(BaseCase):
         # Click using ActionChains
         action = ActionChains(self.driver)
         action.move_to_element(contact_element).click().perform()
+
+    def type_message_and_send(self, message):
+        message_input_selector = 'div.input-message-input[contenteditable="true"]'  # Adjust if necessary
+        message_input = self.wait_for_element_visible(message_input_selector)
+
+        # Focus on the message input div and type the message
+        self.human_like_mouse_movement(message_input)
+        message_input.click()
+        message_input.send_keys(message)
+
+        # Press Enter to send the message
+        message_input.send_keys(Keys.ENTER)
+
     def test_telegram_login(self):
         local_storage_file_path = "local_storage.json"
         self.open('https://web.telegram.org/')
@@ -89,10 +103,12 @@ class TelegramLoginTest(BaseCase):
             print("Local storage saved successfully.")
 
         # Search for the contact name
-        self.search_for_contact("@nkrivulev")
+        self.search_for_contact("@absolutunit3")
 
         # Click on the specific contact after searching
-        self.click_contact("Nikola Krivulev")
+        self.click_contact("Absolute Unit")
+
+        self.type_message_and_send("Hi im ..")
 
         input("Press Enter to close the browser...")
 
