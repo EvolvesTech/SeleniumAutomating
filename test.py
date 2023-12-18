@@ -98,6 +98,20 @@ class TelegramLoginTest(BaseCase):
         action.move_to_element(element).perform()
         self.random_delay()
 
+    def search_for_contact(self, contact_name):
+        search_input_selector = ".input-field-input.input-search-input"  # Replace with your selector
+        
+        # Wait for the search input field to be visible and clickable
+        search_input = self.wait_for_element_visible(search_input_selector)
+        
+        # Move the mouse to the search input field and click on it
+        self.human_like_mouse_movement(search_input)
+        search_input.click()
+
+        # Clear any existing text and input 'Niki'
+        search_input.clear()
+        search_input.send_keys(contact_name)
+
     def save_local_storage(self, path):
         try:
             local_storage = self.driver.execute_script("return JSON.stringify(localStorage);")
@@ -135,7 +149,9 @@ class TelegramLoginTest(BaseCase):
             self.save_local_storage(local_storage_file_path)
             print("Local storage saved successfully.")
 
-        input("Press Enter to close the browser...")
+            
+        self.search_for_contact("Niki")
+    input("Press Enter to close the browser...")
 
 if __name__ == "__main__":
     import pytest

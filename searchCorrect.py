@@ -21,7 +21,6 @@ class TelegramLoginTest(BaseCase):
         return proxy.split(':')
 
     def create_chromedriver(self, PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS, USER_AGENT):
-        chromedriver_path = "C:\\Users\\EVLVSDEV2\\Desktop\\SeleniumAutomation\\chromedriver.exe"
         manifest_json = """
         {
             "version": "1.0.0",
@@ -82,8 +81,7 @@ class TelegramLoginTest(BaseCase):
         options = uc.ChromeOptions()
         options.add_extension(pluginfile)
         options.add_argument(f'--user-agent={USER_AGENT}')
-        # Set the path to the ChromeDriver executable
-        driver = uc.Chrome(executable_path=chromedriver_path, options=options)
+        driver = uc.Chrome(options=options)
         return driver
 
     def add_random_behavior(self):
@@ -99,6 +97,36 @@ class TelegramLoginTest(BaseCase):
         action = ActionChains(self.driver)
         action.move_to_element(element).perform()
         self.random_delay()
+
+    def search_for_contact(self, contact_name):
+        search_input_selector = ".input-field-input.input-search-input"  # Replace with your selector
+        
+        # Wait for the search input field to be visible and clickable
+        search_input = self.wait_for_element_visible(search_input_selector)
+        
+        # Move the mouse to the search input field and click on it
+        self.human_like_mouse_movement(search_input)
+        search_input.click()
+
+        # Clear any existing text and input 'Niki'
+        search_input.clear()
+        search_input.send_keys(contact_name)
+
+    def manually_type_url(self, url):
+        # Navigate to the URL by manually typing in the address bar
+        self.driver.get('about:blank')  # Open a new tab
+        self.driver.get('https://www.google.com')
+        time.sleep(2)  # Wait for Google to load
+        
+        # Simulate human-like typing of the URL
+        address_bar = self.driver.find_element_by_name("q")
+        self.human_like_mouse_movement(address_bar)
+        address_bar.click()
+        for char in url:
+            address_bar.send_keys(char)
+            self.random_delay(min_seconds=0.1, max_seconds=0.3)
+        
+        address_bar.send_keys('\n')  # Press Enter to go to the URL
 
     def save_local_storage(self, path):
         try:
@@ -119,11 +147,29 @@ class TelegramLoginTest(BaseCase):
 
     def test_telegram_login(self):
         local_storage_file_path = "local_storage.json"
-        # Open Google
-        self.open('https://www.google.com/')
-       
-    input("Press Enter to close the browser...")
+        
+        # Manually type the URL in the address bar
+        self.manually_type_url("https://web.telegram.org")
+        
+        # Load local storage if it exists
+        if os.path.exists(local_storage_file_path):
+            self.load_local_storage(local_storage_file_path)
+            print("Local storage loaded successfully.")
+
+        # Open the page again to apply local storage
+        self.open('https://web.telegram.org/')
+
+        # If no saved local storage, perform login and save it
+        if not os.path.exists(local_storage_file_path):
+            print("Local storage file not found. Please log in manually.")
+            chatlist_selector = ".stories-list"
+            self.wait_for_element_visible(chatlist_selector, timeout=600)
+            self.save_local_storage(local_storage_file_path)
+            print("Local storage saved successfully.")
+
+        self.search_for_contact("Niki")
+        input("Press Enter to close the browser...")
 
 if __name__ == "__main__":
     import pytest
-    pytest.main(args=["-s", "auto_login.py"])
+    pytest.main(args=["-s", "test.py"])
