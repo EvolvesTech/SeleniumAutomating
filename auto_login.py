@@ -2,8 +2,10 @@ from seleniumbase import BaseCase
 import os
 import time
 import random
-import json
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 class TelegramLoginTest(BaseCase):
     def setUp(self):
@@ -49,10 +51,23 @@ class TelegramLoginTest(BaseCase):
         self.human_like_mouse_movement(search_input)
         search_input.click()
 
-        # Clear any existing text and input 'Niki'
+        # Clear any existing text and input the desired contact name
         search_input.clear()
         search_input.send_keys(contact_name)
 
+    def click_contact(self, contact_name):
+        contact_selector = f"//span[contains(text(), '{contact_name}')]"
+        contact_element = self.wait_for_element_visible(contact_selector)
+
+        # Scroll to the element's position
+        self.driver.execute_script("arguments[0].scrollIntoView();", contact_element)
+
+        # Wait for the element to be clickable
+        WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, contact_selector)))
+
+        # Click using ActionChains
+        action = ActionChains(self.driver)
+        action.move_to_element(contact_element).click().perform()
     def test_telegram_login(self):
         local_storage_file_path = "local_storage.json"
         self.open('https://web.telegram.org/')
@@ -73,7 +88,11 @@ class TelegramLoginTest(BaseCase):
             self.save_local_storage(local_storage_file_path)
             print("Local storage saved successfully.")
 
+        # Search for the contact name
         self.search_for_contact("@nkrivulev")
+
+        # Click on the specific contact after searching
+        self.click_contact("Nikola Krivulev")
 
         input("Press Enter to close the browser...")
 
