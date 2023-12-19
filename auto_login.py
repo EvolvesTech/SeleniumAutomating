@@ -74,12 +74,16 @@ class TelegramLoginTest(BaseCase):
         message_input_selector = 'div.input-message-input[contenteditable="true"]'  # Adjust if necessary
         message_input = self.wait_for_element_visible(message_input_selector)
 
-        # Focus on the message input div and type the message
+    # Focus on the message input div
         self.human_like_mouse_movement(message_input)
         message_input.click()
-        message_input.send_keys(message)
 
-        # Press Enter to send the message
+    # Simulate human-like typing
+        for char in message:
+            message_input.send_keys(char)
+            time.sleep(random.uniform(0.1, 0.3))  # Adjust the delay range as needed
+
+    # Press Enter to send the message
         message_input.send_keys(Keys.ENTER)
 
     def test_telegram_login(self):
@@ -103,7 +107,7 @@ class TelegramLoginTest(BaseCase):
             print("Local storage saved successfully.")
 
         # Search for the contact name
-        self.search_for_contact("@absolutunit3")
+        self.search_for_contact("@nkrivulev")
 
         # Click on the specific contact after searching
         self.click_contact("Nikola Krivulev")
