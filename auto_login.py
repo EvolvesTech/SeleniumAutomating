@@ -6,6 +6,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 
 class TelegramLoginTest(BaseCase):
     def setUp(self):
@@ -70,24 +71,18 @@ class TelegramLoginTest(BaseCase):
         action.move_to_element(contact_element).click().perform()
 
     def type_message_and_send(self, message):
-        message_input_selector = ".input-message-input"  # Selector for the message input field
-        send_button_selector = ".btn-send-icon-forward"  # Selector for the send button
-    
-    # Wait for the message input field to be visible and clickable
+        message_input_selector = 'div.input-message-input[contenteditable="true"]'  # Adjust if necessary
         message_input = self.wait_for_element_visible(message_input_selector)
-    
-    # Move the mouse to the message input field and click on it
+
+        # Focus on the message input div and type the message
         self.human_like_mouse_movement(message_input)
         message_input.click()
-
-    # Type the message into the input field using key presses
         message_input.send_keys(message)
 
-    # Find and click the send button after typing the message
-        send_button = self.wait_for_element_clickable(send_button_selector)
-        send_button.click()
+        # Press Enter to send the message
+        message_input.send_keys(Keys.ENTER)
 
-    def test_telegram_login_and_send_message(self):
+    def test_telegram_login(self):
         local_storage_file_path = "local_storage.json"
         self.open('https://web.telegram.org/')
 
@@ -108,7 +103,7 @@ class TelegramLoginTest(BaseCase):
             print("Local storage saved successfully.")
 
         # Search for the contact name
-        self.search_for_contact("@nkrivulev")
+        self.search_for_contact("@absolutunit3")
 
         # Click on the specific contact after searching
         self.click_contact("Nikola Krivulev")

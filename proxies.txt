@@ -1,10 +1,1 @@
-141.95.21.251:10391:nikolov4622:4ae1ae
-185.199.228.220:7300:wdnvemdj:y7nds9avzckr
-185.199.231.45:8382:wdnvemdj:y7nds9avzckr
-188.74.210.207:6286:wdnvemdj:y7nds9avzckr
-188.74.183.10:8279:wdnvemdj:y7nds9avzckr
-188.74.210.21:6100:wdnvemdj:y7nds9avzckr
-45.155.68.129:8133:wdnvemdj:y7nds9avzckr
-154.95.36.199:6893:wdnvemdj:y7nds9avzckr
-45.94.47.66:8110:wdnvemdj:y7nds9avzckr
-144.168.217.88:8780:wdnvemdj:y7nds9avzckr
+node-de-111.astroproxy.com:10391:nikolov4622:4ae1ae
