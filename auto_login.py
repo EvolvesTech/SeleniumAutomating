@@ -1,7 +1,11 @@
-from seleniumbase import BaseCase
 import os
 import time
 import random
+import zipfile
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from seleniumbase import BaseCase
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -9,6 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 
 class TelegramLoginTest(BaseCase):
+    
     def setUp(self):
         super(TelegramLoginTest, self).setUp()
         # Setting a custom user-agent
@@ -54,7 +59,11 @@ class TelegramLoginTest(BaseCase):
 
         # Clear any existing text and input the desired contact name
         search_input.clear()
-        search_input.send_keys(contact_name)
+
+        # Simulate human-like typing for the contact name
+        for char in contact_name:
+            search_input.send_keys(char)
+            time.sleep(random.uniform(0.1, 0.3)) 
 
     def click_contact(self, contact_name):
         contact_selector = f"//span[contains(text(), '{contact_name}')]"
@@ -74,20 +83,101 @@ class TelegramLoginTest(BaseCase):
         message_input_selector = 'div.input-message-input[contenteditable="true"]'  # Adjust if necessary
         message_input = self.wait_for_element_visible(message_input_selector)
 
-    # Focus on the message input div
+        # Focus on the message input div
         self.human_like_mouse_movement(message_input)
         message_input.click()
 
-    # Simulate human-like typing
+        # Simulate human-like typing
         for char in message:
             message_input.send_keys(char)
             time.sleep(random.uniform(0.1, 0.3))  # Adjust the delay range as needed
 
-    # Press Enter to send the message
+        # Press Enter to send the message
         message_input.send_keys(Keys.ENTER)
 
-    def test_telegram_login(self):
+    def create_chromedriver(self, PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS, USER_AGENT):
+        manifest_json = """
+        {
+            "version": "1.0.0",
+            "manifest_version": 2,
+            "name": "Chrome Proxy",
+            "permissions": [
+                "proxy",
+                "tabs",
+                "unlimitedStorage",
+                "storage",
+                "<all_urls>",
+                "webRequest",
+                "webRequestBlocking"
+            ],
+            "background": {
+                "scripts": ["background.js"]
+            },
+            "minimum_chrome_version":"22.0.0"
+        }
+        """
+
+        background_js = f"""
+        var config = {{
+            mode: "fixed_servers",
+            rules: {{
+                singleProxy: {{
+                    scheme: "http",
+                    host: "{PROXY_HOST}",
+                    port: parseInt({PROXY_PORT})
+                }},
+                bypassList: ["localhost"]
+            }}
+        }};
+
+        chrome.proxy.settings.set({{value: config, scope: "regular"}}, function() {{}});
+
+        function callbackFn(details) {{
+            return {{
+                authCredentials: {{
+                    username: "{PROXY_USER}",
+                    password: "{PROXY_PASS}"
+                }}
+            }};
+        }}
+
+        chrome.webRequest.onAuthRequired.addListener(
+            callbackFn,
+            {{urls: ["<all_urls>"]}},
+            ['blocking']
+        );
+        """
+        
+        def get_chromedriver(use_proxy=True, user_agent=USER_AGENT):
+            chrome_options = webdriver.ChromeOptions()
+            if use_proxy:
+                pluginfile = 'proxy_auth_plugin.zip'
+                with zipfile.ZipFile(pluginfile, 'w') as zp:
+                    zp.writestr("manifest.json", manifest_json)
+                    zp.writestr("background.js", background_js)
+                chrome_options.add_extension(pluginfile)
+                chrome_options.add_argument("--start-maximized")
+                chrome_options.add_experimental_option("detach", True)
+                chrome_options.add_argument("--mute-audio")
+            if user_agent:
+                chrome_options.add_argument(f'--user-agent={user_agent}')
+            
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+            return driver
+
+        driver = get_chromedriver(use_proxy=True)
+        return driver
+    
+    def test_telegram_login_with_proxy(self):
         local_storage_file_path = "local_storage.json"
+
+        # Proxy details - Change these to match your proxy settings
+        PROXY_HOST = "your_proxy_host"
+        PROXY_PORT = "your_proxy_port"
+        PROXY_USER = "your_proxy_username"
+        PROXY_PASS = "your_proxy_password"
+
         self.open('https://web.telegram.org/')
 
         # Load local storage if it exists
