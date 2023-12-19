@@ -1,0 +1,25 @@
+auto_login.py::TelegramLoginTest::test_telegram_login_and_send_message
+--------------------------------------------------------------------
+Last Page: [WARNING! Browser Not Open!]
+ Duration: 22.56s
+  Browser: Chrome 120.0.6099.72
+   Driver: chromedriver 120.0.6099.71
+Timestamp: 1702906404  (Unix Timestamp)
+     Date: Monday, 18 December 2023
+     Time: 2:33:24 PM  (W. Europe Daylight Time, UTC+02:00)
+--------------------------------------------------------------------
+Traceback:
+  File "C:\Users\EVLVSDEV1\TelegramBot\SeleniumAutomating\auto_login.py", line 117, in test_telegram_login_and_send_message
+    self.type_message_and_send("Hello")
+  File "C:\Users\EVLVSDEV1\TelegramBot\SeleniumAutomating\auto_login.py", line 87, in type_message_and_send
+    send_button = self.wait_for_element_clickable(send_button_selector)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EVLVSDEV1\AppData\Local\Programs\Python\Python311\Lib\site-packages\seleniumbase\fixtures\base_case.py", line 8628, in wait_for_element_clickable
+    return page_actions.wait_for_element_clickable(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EVLVSDEV1\AppData\Local\Programs\Python\Python311\Lib\site-packages\seleniumbase\fixtures\page_actions.py", line 910, in wait_for_element_clickable
+    timeout_exception(ElementNotVisibleException, message)
+  File "C:\Users\EVLVSDEV1\AppData\Local\Programs\Python\Python311\Lib\site-packages\seleniumbase\fixtures\page_actions.py", line 266, in timeout_exception
+    raise exc(msg)
+Exception: Message: 
+ Element {.btn-send-icon-forward} was not visible after 10 seconds!

@@ -68,7 +68,26 @@ class TelegramLoginTest(BaseCase):
         # Click using ActionChains
         action = ActionChains(self.driver)
         action.move_to_element(contact_element).click().perform()
-    def test_telegram_login(self):
+
+    def type_message_and_send(self, message):
+        message_input_selector = ".input-message-input"  # Selector for the message input field
+        send_button_selector = ".btn-send-icon-forward"  # Selector for the send button
+    
+    # Wait for the message input field to be visible and clickable
+        message_input = self.wait_for_element_visible(message_input_selector)
+    
+    # Move the mouse to the message input field and click on it
+        self.human_like_mouse_movement(message_input)
+        message_input.click()
+
+    # Type the message into the input field using key presses
+        message_input.send_keys(message)
+
+    # Find and click the send button after typing the message
+        send_button = self.wait_for_element_clickable(send_button_selector)
+        send_button.click()
+
+    def test_telegram_login_and_send_message(self):
         local_storage_file_path = "local_storage.json"
         self.open('https://web.telegram.org/')
 
@@ -93,6 +112,9 @@ class TelegramLoginTest(BaseCase):
 
         # Click on the specific contact after searching
         self.click_contact("Nikola Krivulev")
+
+        # Type a message and send it
+        self.type_message_and_send("Hello")
 
         input("Press Enter to close the browser...")
 
