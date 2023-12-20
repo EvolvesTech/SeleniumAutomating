@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 
 class TelegramLoginTest(BaseCase):
-    
+
     def setUp(self):
         super(TelegramLoginTest, self).setUp()
         # Setting a custom user-agent
@@ -49,53 +49,40 @@ class TelegramLoginTest(BaseCase):
 
     def search_for_contact(self, contact_name):
         search_input_selector = ".input-field-input.input-search-input"  # Replace with your selector
-        
-        # Wait for the search input field to be visible and clickable
         search_input = self.wait_for_element_visible(search_input_selector)
-        
-        # Move the mouse to the search input field and click on it
         self.human_like_mouse_movement(search_input)
         search_input.click()
-
-        # Clear any existing text and input the desired contact name
         search_input.clear()
-
-        # Simulate human-like typing for the contact name
         for char in contact_name:
             search_input.send_keys(char)
-            time.sleep(random.uniform(0.1, 0.3)) 
+            time.sleep(random.uniform(0.1, 0.3))
 
     def click_contact(self, contact_name):
         contact_selector = f"//span[contains(text(), '{contact_name}')]"
         contact_element = self.wait_for_element_visible(contact_selector)
-
-        # Scroll to the element's position
         self.driver.execute_script("arguments[0].scrollIntoView();", contact_element)
-
-        # Wait for the element to be clickable
         WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, contact_selector)))
-
-        # Click using ActionChains
         action = ActionChains(self.driver)
         action.move_to_element(contact_element).click().perform()
 
     def type_message_and_send(self, message):
         message_input_selector = 'div.input-message-input[contenteditable="true"]'  # Adjust if necessary
         message_input = self.wait_for_element_visible(message_input_selector)
-
-        # Focus on the message input div
         self.human_like_mouse_movement(message_input)
         message_input.click()
-
-        # Simulate human-like typing
         for char in message:
             message_input.send_keys(char)
-            time.sleep(random.uniform(0.1, 0.3))  # Adjust the delay range as needed
-
-        # Press Enter to send the message
+            time.sleep(random.uniform(0.1, 0.3))
         message_input.send_keys(Keys.ENTER)
 
-    def create_chromedriver(self, PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS, USER_AGENT):
+    def read_proxy_details(self, proxy_file_path):
+        with open(proxy_file_path, 'r') as file:
+            proxy_data = file.read().strip()
+        return proxy_data.split(':')
+
+    def create_chromedriver(self, proxy_file_path, USER_AGENT):
+        PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS = self.read_proxy_details(proxy_file_path)
+
         manifest_json = """
         {
             "version": "1.0.0",
@@ -147,48 +134,37 @@ class TelegramLoginTest(BaseCase):
             ['blocking']
         );
         """
-        
-        def get_chromedriver(use_proxy=True, user_agent=USER_AGENT):
-            chrome_options = webdriver.ChromeOptions()
-            if use_proxy:
-                pluginfile = 'proxy_auth_plugin.zip'
-                with zipfile.ZipFile(pluginfile, 'w') as zp:
-                    zp.writestr("manifest.json", manifest_json)
-                    zp.writestr("background.js", background_js)
-                chrome_options.add_extension(pluginfile)
-                chrome_options.add_argument("--start-maximized")
-                chrome_options.add_experimental_option("detach", True)
-                chrome_options.add_argument("--mute-audio")
-            if user_agent:
-                chrome_options.add_argument(f'--user-agent={user_agent}')
-            
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-            return driver
 
-        driver = get_chromedriver(use_proxy=True)
+        chrome_options = webdriver.ChromeOptions()
+        pluginfile = 'proxy_auth_plugin.zip'
+        with zipfile.ZipFile(pluginfile, 'w') as zp:
+            zp.writestr("manifest.json", manifest_json)
+            zp.writestr("background.js", background_js)
+        chrome_options.add_extension(pluginfile)
+        chrome_options.add_argument("--start-maximized")
+        chrome_options.add_experimental_option("detach", True)
+        chrome_options.add_argument("--mute-audio")
+        if USER_AGENT:
+            chrome_options.add_argument(f'--user-agent={USER_AGENT}')
+        
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
         return driver
-    
+
     def test_telegram_login_with_proxy(self):
         local_storage_file_path = "local_storage.json"
+        proxy_file_path = "proxies.txt"  # Path to your proxies.txt file
 
-        # Proxy details - Change these to match your proxy settings
-        PROXY_HOST = "your_proxy_host"
-        PROXY_PORT = "your_proxy_port"
-        PROXY_USER = "your_proxy_username"
-        PROXY_PASS = "your_proxy_password"
+        self.driver = self.create_chromedriver(proxy_file_path, USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36")
 
         self.open('https://web.telegram.org/')
 
-        # Load local storage if it exists
         if os.path.exists(local_storage_file_path):
             self.load_local_storage(local_storage_file_path)
             print("Local storage loaded successfully.")
 
-        # Open the page again to apply local storage
         self.open('https://web.telegram.org/')
 
-        # If no saved local storage, perform login and save it
         if not os.path.exists(local_storage_file_path):
             print("Local storage file not found. Please log in manually.")
             chatlist_selector = ".stories-list"
@@ -196,14 +172,9 @@ class TelegramLoginTest(BaseCase):
             self.save_local_storage(local_storage_file_path)
             print("Local storage saved successfully.")
 
-        # Search for the contact name
         self.search_for_contact("@nkrivulev")
-
-        # Click on the specific contact after searching
         self.click_contact("Nikola Krivulev")
-
-        # Type a message and send it
-        self.type_message_and_send("Hello")
+        self.type_message_and_send("Hello, are you interested in marketing?")
 
         input("Press Enter to close the browser...")
 
