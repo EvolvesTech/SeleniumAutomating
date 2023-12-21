@@ -154,6 +154,7 @@ class TelegramLoginTest(BaseCase):
 
         # Configuring Chrome options for the driver
         chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         pluginfile = 'proxy_auth_plugin.zip'
         with zipfile.ZipFile(pluginfile, 'w') as zp:
             zp.writestr("manifest.json", manifest_json)
@@ -164,8 +165,11 @@ class TelegramLoginTest(BaseCase):
         chrome_options.add_argument("--mute-audio")
         if USER_AGENT:
             chrome_options.add_argument(f'--user-agent={USER_AGENT}')
-        
+
         # Creating and returning the ChromeDriver instance
+        #Chrome options to not detect us
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+        chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=chrome_options)
         return driver
@@ -210,8 +214,8 @@ class TelegramLoginTest(BaseCase):
             print("Local storage saved successfully.")
 
         # Searching and contacting a specific user
-        self.search_for_contact("@yan_sing")
-        self.click_contact("@yan_sing")
+        self.search_for_contact("@Leadsbaseforex")
+        self.click_contact("@Leadsbaseforex")
         self.type_message_and_send("Hello, are you interested in marketing?")
 
         # Pausing execution to allow for manual interaction if necessary
