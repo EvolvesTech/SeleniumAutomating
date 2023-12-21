@@ -210,8 +210,8 @@ class TelegramLoginTest(BaseCase):
             print("Local storage saved successfully.")
 
         # Searching and contacting a specific user
-        self.search_for_contact("@Sasho")
-        self.click_contact("@Sasho")
+        self.search_for_contact("@yan_sing")
+        self.click_contact("@yan_sing")
         self.type_message_and_send("Hello, are you interested in marketing?")
 
         # Pausing execution to allow for manual interaction if necessary
