@@ -185,7 +185,19 @@ class TelegramLoginTest(BaseCase):
         if os.path.exists(local_storage_file_path):
             self.load_local_storage(local_storage_file_path)
             print("Local storage loaded successfully.")
+        else:
+            print("Local storage file not found. Please log in manually.")
 
+            # Open Telegram web page for manual login
+            self.open('https://web.telegram.org/')
+            
+            # Wait for user to log in manually, identified by the presence of the chat list
+            chatlist_selector = ".stories-list"
+            self.wait_for_element_visible(chatlist_selector, timeout=600)
+            
+            # After manual login, save the local storage
+            self.save_local_storage(local_storage_file_path)
+            print("Local storage saved successfully.")
         # Reopening Telegram web page
         self.open('https://web.telegram.org/')
 
