@@ -1,3 +1,4 @@
+gate.smartproxy.com:7000:user-spbk2q6zpf-country-bg:8cmj5iVzxPy2jgD2zX
 141.95.21.251:10391:nikolov4622:4ae1ae
 185.199.228.220:7300:wdnvemdj:y7nds9avzckr
 185.199.231.45:8382:wdnvemdj:y7nds9avzckr
