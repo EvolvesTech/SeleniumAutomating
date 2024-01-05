@@ -10,6 +10,16 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 
+#  3. Customizable Initial Message External Message Configuration: Store the initial messages in a
+#  database or a configuration file. This allows you to change the message without modifying the bot's source code.
+#
+#  Dynamic Message Retrieval: Update the bot to read the current message from the external source right before
+#  sending a message, ensuring it always uses the latest version.
+#
+#  4. Editable Usernames List External Usernames Storage: Use a database or a file to store the list of usernames.
+#  Ensure the storage method allows easy updating of the list.
+#  Dynamic Usernames Retrieval: Create a function within the bot that fetches the latest list of usernames
+#  from the external source before starting its operations.
 
 class Base(DeclarativeBase):
     pass
@@ -29,6 +39,13 @@ class Profile(Base):
         # noinspection PyUnresolvedReferences
         return self.users_list.split(',')
 
+
+#  7. Messaging Frequency Limits Rate Limiting Algorithm: Design an algorithm to enforce limits on the
+#  number of messages sent. This might involve tracking the time of each sent message and checking against daily,
+#  weekly, and monthly limits.
+#
+#  Limit Enforcement: Prior to sending a message, the bot should verify that it hasn't exceeded its messaging quota
+#   and should stop until the limit resets.
 
 class ProfileLimit(Base):
 

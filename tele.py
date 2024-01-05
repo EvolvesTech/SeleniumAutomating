@@ -47,6 +47,11 @@ def catch_timed_out(function: AnyFunction) -> AnyFunction:
     return wrapper
 
 
+# Spam and Ban Detection: Implement logic to recognize patterns indicating
+#  that a bot might be blocked or banned (e.g., repeated failures to send messages, being redirected to unexpected pages,
+#   or receiving specific warning messages, no such username, similar names, spam blocked, logged out/ banned).
+#   After we run the script we manually check how the script runs and there might be other additional errors that need
+#   to be added.
 def catch_logged_out(function: AnyFunction) -> AnyFunction:
     @functools.wraps(function)
     def wrapper(self, *args, **kwargs) -> _T:
@@ -92,6 +97,11 @@ class Telegram:
             max_month_limit: int = 100,
     ):
         proxy_file_path = "proxies.txt"
+        #  6. Reporting System Logging Mechanism: Develop a robust logging system that captures key activities and statuses.
+        #  This might include information like login attempts, messages sent, errors encountered, etc.
+        #
+        #  Report Generation: Set up a routine to compile these logs into comprehensive reports. You might want to
+        #  automate this process to run at regular intervals (e.g., daily or weekly).
         self.logger = logging.getLogger(f"TelegramAccount#{account_id}")
         self.logger.setLevel(logging.DEBUG)
 
@@ -170,7 +180,9 @@ class Telegram:
             original_selector=original,
             timeout=timeout
         )
-
+    #  2. Test Outcomes for Various Scenarios Username Validation: Enhance the search functionality to interpret search
+    #  results accurately. This involves analyzing the DOM elements to check if the username is found, absent, or if there
+    #  are suggestions for similar usernames.
     @catch_timed_out
     def search_for_contact(self, contact_name):
 
@@ -193,6 +205,12 @@ class Telegram:
 
         self.random_delay(4, 5)
 
+    #  7. Messaging Frequency Limits Rate Limiting Algorithm: Design an algorithm to enforce limits on the
+    #  number of messages sent. This might involve tracking the time of each sent message and checking against daily,
+    #  weekly, and monthly limits.
+    #
+    #  Limit Enforcement: Prior to sending a message, the bot should verify that it hasn't exceeded its messaging quota
+    #   and should stop until the limit resets.
     def limit_check(self) -> None:
 
         with create_session() as session:

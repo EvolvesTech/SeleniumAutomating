@@ -13,7 +13,8 @@ logs = Path(__file__).parent / 'logs'
 if not logs.exists():
     logs.mkdir()
 
-
+#  1. Create Multiple Instances of the Bot -Each bot instance should have its own browser instance, possibly using separate
+#  user profiles for each to maintain isolated sessions. It could be achieved with multiprocessing.
 def run_profile(auth_storage_filepath: str, acc_id: str) -> None:
     telegram = Telegram(auth_storage_filepath, acc_id)
     telegram.telegram_login_with_proxy()
