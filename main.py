@@ -5,7 +5,8 @@ from multiprocessing import Process
 from tele import Telegram
 from db import (
     create_profile_if_not_exists,
-    create_session
+    create_session,
+    Profile
 )
 
 profiles = Path(__file__).parent / 'profile_files'
@@ -62,6 +63,7 @@ def main() -> None:
             #     session=session
             # ),
         ]
+        user_profiles = session.query(Profile).all()
 
         processes = []
 
