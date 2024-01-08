@@ -42,7 +42,6 @@ def catch_timed_out(function: AnyFunction) -> AnyFunction:
             return function(self, *args, **kwargs)
         except (TimeoutException, NoSuchElementException):
             self.logger.error(f'Possibly, telegram is block or timing out for `account#{self.account_id}`')
-            self.driver.close()
             sys.exit(0)
     return wrapper
 
@@ -64,7 +63,6 @@ def catch_logged_out(function: AnyFunction) -> AnyFunction:
         except:
             self.logger.error(f'Can\'t do actions in `account#{self.account_id}`. Possibly session expired.')
             self.logger.error(traceback.format_exc())
-            self.driver.close()
             sys.exit(0)
     return wrapper
 
@@ -80,7 +78,6 @@ def catch_limit_exceeded(function: AnyFunction) -> AnyFunction:
             return function(self, *args, **kwargs)
         except LimitExceeded:
             self.logger.error(f'Limit exceeded for `account#{self.account_id}`')
-            self.driver.close()
             sys.exit(0)
     return wrapper
 
@@ -229,7 +226,6 @@ class Telegram:
                 )
                 session.add(profile_limit)
                 session.commit()
-                return
 
             if profile_limit.day_limit >= self.max_day_limit:
                 self.logger.error(f'Day limit exceeded for `account#{self.account_id}`')
