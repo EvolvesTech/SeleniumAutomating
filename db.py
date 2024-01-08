@@ -21,6 +21,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 #  Dynamic Usernames Retrieval: Create a function within the bot that fetches the latest list of usernames
 #  from the external source before starting its operations.
 
+
 class Base(DeclarativeBase):
     pass
 
@@ -53,9 +54,12 @@ class ProfileLimit(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     profile_id: Mapped[int] = mapped_column(nullable=False)
-    day_limit: Mapped[int] = mapped_column(default=0)
-    week_limit: Mapped[int] = mapped_column(default=0)
-    month_limit: Mapped[int] = mapped_column(default=0)
+    day_counter: Mapped[int] = mapped_column(default=0)
+    week_counter: Mapped[int] = mapped_column(default=0)
+    month_counter: Mapped[int] = mapped_column(default=0)
+    day_limit: Mapped[int] = mapped_column(default=100)
+    week_limit: Mapped[int] = mapped_column(default=700)
+    month_limit: Mapped[int] = mapped_column(default=3000)
     last_message_date: Mapped[datetime.datetime] = mapped_column(nullable=False)
 
 

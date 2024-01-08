@@ -89,9 +89,9 @@ class Telegram:
             auth_local_storage_path: str,
             account_id: str,
             logs_file: str = None,
-            max_day_limit: int = 1,
-            max_week_limit: int = 50,
-            max_month_limit: int = 100,
+            max_day_limit: int = 100,
+            max_week_limit: int = 700,
+            max_month_limit: int = 3000,
     ):
         proxy_file_path = "proxies.txt"
         #  6. Reporting System Logging Mechanism: Develop a robust logging system that captures key activities and statuses.
@@ -219,30 +219,33 @@ class Telegram:
             if profile_limit is None:
                 profile_limit = ProfileLimit(
                     profile_id=self.account_id,
-                    day_limit=0,
-                    week_limit=0,
-                    month_limit=0,
+                    day_counter=0,
+                    week_counter=0,
+                    month_counter=0,
+                    day_limit=self.max_day_limit,
+                    week_limit=self.max_week_limit,
+                    month_limit=self.max_month_limit,
                     last_message_date=datetime.datetime.now()
                 )
                 session.add(profile_limit)
                 session.commit()
 
-            if profile_limit.day_limit >= self.max_day_limit:
+            if profile_limit.day_counter >= profile_limit.day_limit:
                 self.logger.error(f'Day limit exceeded for `account#{self.account_id}`')
                 raise LimitExceeded
 
-            if profile_limit.week_limit >= self.max_week_limit:
+            if profile_limit.week_counter >= profile_limit.week_limit:
                 self.logger.error(f'Week limit exceeded for `account#{self.account_id}`')
                 raise LimitExceeded
 
-            if profile_limit.month_limit >= self.max_month_limit:
+            if profile_limit.month_counter >= profile_limit.month_limit:
                 self.logger.error(f'Month limit exceeded for `account#{self.account_id}`')
                 raise LimitExceeded
 
             profile_limit.last_message_date = datetime.datetime.now()
-            profile_limit.day_limit += 1
-            profile_limit.week_limit += 1
-            profile_limit.month_limit += 1
+            profile_limit.day_counter += 1
+            profile_limit.week_counter += 1
+            profile_limit.month_counter += 1
             session.commit()
 
     def update_bot_data(self) -> None:
