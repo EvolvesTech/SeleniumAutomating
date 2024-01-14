@@ -1,6 +1,7 @@
 import datetime
 import functools
 import os
+import pathlib
 import sys
 import time
 import random
@@ -11,6 +12,7 @@ from pathlib import Path
 import logging
 
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException as NoSuchElementExceptionSE
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.remote.webelement import WebElement
@@ -21,10 +23,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from seleniumbase.fixtures import page_actions
 from seleniumbase.fixtures import page_utils
-from selenium.common.exceptions import TimeoutException
-from seleniumbase.common.exceptions import NoSuchElementException
+from seleniumbase.common.exceptions import (
+    NoSuchElementException,
+    ElementNotVisibleException,
+    TimeoutException
+)
 
-from db import create_session, ProfileLimit, Profile
+from db import create_session, ProfileLimit, Profile, Message
 
 _T = typing.TypeVar('_T')
 AnyFunction = typing.Callable[..., _T]
@@ -88,12 +93,13 @@ class Telegram:
             self,
             auth_local_storage_path: str,
             account_id: str,
-            logs_file: str = None,
+            user_profiles_path: str,
+            proxy: str,
+            logs_filename: str = None,
             max_day_limit: int = 100,
             max_week_limit: int = 700,
             max_month_limit: int = 3000,
     ):
-        proxy_file_path = "proxies.txt"
         #  6. Reporting System Logging Mechanism: Develop a robust logging system that captures key activities and statuses.
         #  This might include information like login attempts, messages sent, errors encountered, etc.
         #
@@ -102,21 +108,24 @@ class Telegram:
         self.logger = logging.getLogger(f"TelegramAccount#{account_id}")
         self.logger.setLevel(logging.DEBUG)
 
-        if logs_file is None:
+        if logs_filename is None:
             logs_file = Path(__file__).parent / Path('logs') / f"logs_{account_id}.log"
+        else:
+            logs_file = Path(__file__).parent / Path('logs') / logs_filename
 
         handler = logging.FileHandler(logs_file)
         handler.setFormatter(
             logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         )
         self.logger.addHandler(handler)
+        self.proxy = proxy
+        self.user_profiles_path = pathlib.Path(__file__).parent / Path(user_profiles_path)
         self.max_day_limit = max_day_limit
         self.max_week_limit = max_week_limit
         self.max_month_limit = max_month_limit
         self.account_id = account_id
         self.local_storage_file_path = auth_local_storage_path
         self.driver = self.create_chromedriver(
-            proxy_file_path,
             USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                        "Chrome/88.0.4324.150 Safari/537.36"
         )
@@ -147,13 +156,13 @@ class Telegram:
     def save_local_storage(self, path):
         self.logger.info('Saving local storage')
         local_storage = self.driver.execute_script("return JSON.stringify(localStorage);")
-        with open(path, 'w') as file:
+        with open(path, 'w', encoding='utf-8') as file:
             file.write(local_storage)
         self.logger.info('Local storage saved successfully')
 
     def load_local_storage(self, path):
         self.logger.info('Loading local storage')
-        with open(path, 'r') as file:
+        with open(path, 'r', encoding='utf-8') as file:
             local_storage = file.read()
         self.driver.execute_script(
             "localStorage.clear(); var data = JSON.parse(arguments[0]); for (var key in data) localStorage.setItem("
@@ -165,13 +174,14 @@ class Telegram:
             self,
             selector: str,
             by: str = 'css selector',
-            timeout: int = page_actions.settings.LARGE_TIMEOUT
+            timeout: int = page_actions.settings.LARGE_TIMEOUT,
+            extract_from=None
     ) -> WebElement:
         self.logger.info(f'Waiting for element {repr(selector)} to be visible')
         original = selector
         selector, by = page_utils.recalculate_selector(selector, by)
         return page_actions.wait_for_element_visible(
-            driver=self.driver,
+            driver=self.driver if extract_from is None else extract_from,
             selector=selector,
             by=by,
             original_selector=original,
@@ -195,7 +205,7 @@ class Telegram:
         self.human_like_mouse_movement(search_input)
         search_input.click()
         search_input.clear()
-
+        contact_name = "@" + contact_name
         for char in contact_name:
             search_input.send_keys(char)
             time.sleep(random.uniform(0.1, 0.3))
@@ -300,8 +310,14 @@ class Telegram:
             contact_selector = f"//div[contains(text(), '{contact_name}')]"
             best_choice = self._wait_for_element_visible(contact_selector, by='xpath')
         except:
-            contact_selector = f"//span[contains(text(), '{contact_name.replace('@', '')}')]"
-            best_choice = self._wait_for_element_visible(contact_selector, by='xpath')
+
+            try:
+                contact_selector = f"//span[contains(text(), '{contact_name.replace('@', '')}')]"
+                best_choice = self._wait_for_element_visible(contact_selector, by='xpath')
+
+            except:
+                self._wait_for_element_visible('.ChatInfo').click()
+                return
 
         self.random_delay(3, 5)
 
@@ -352,8 +368,8 @@ class Telegram:
             proxy_data = file.readline().strip()
         return proxy_data.split(':')
 
-    def create_chromedriver(self, proxy_file_path, USER_AGENT):
-        PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS = self.read_proxy_details(proxy_file_path)
+    def create_chromedriver(self, USER_AGENT):
+        PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS = self.proxy.split(':')
 
         # Setting up the Chrome proxy
         manifest_json = """
@@ -423,16 +439,136 @@ class Telegram:
         if USER_AGENT:
             chrome_options.add_argument(f'--user-agent={USER_AGENT}')
 
+        # self.user_profiles_path.mkdir(exist_ok=True, parents=True)
+        # chrome_options.add_argument(f'--user-data-dir={str(self.user_profiles_path)}')
+
         chrome_options.add_experimental_option('useAutomationExtension', False)
         chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
         service = Service(ChromeDriverManager().install())
+        os.chmod(service.path, 0o755)
         driver = webdriver.Chrome(service=service, options=chrome_options)
         return driver
 
+    # 3.There should be table it the DB for the message reports,was the message seen/not send/send etc.(The table should look something like:
+    # bot acc - user we write to - the message we send - status of the message - counter for the messages sent to this acc).
+    def save_current_message_state(self, username: str) -> None:
+        with create_session() as session:
+            element_dates = self.driver.find_elements('css selector', '.time-inner')
+
+            if not element_dates:
+                element_dates = self.driver.find_elements('css selector', '.peer-color-count-1 .message-time')
+
+            ActionChains(self.driver).move_to_element(element_dates[-1]).perform()
+            date = element_dates[-1].get_attribute('title')
+
+            try:
+                current_date = datetime.datetime.strptime(date, '%d %B %Y, %H:%M:%S')
+            except:
+                current_date = datetime.datetime.strptime(date, '%b %d, %Y, %H:%M:%S')
+
+            session.add(
+                Message(
+                    profile_id=self.account_id,
+                    message=self.message,
+                    username=username,
+                    state='sent',
+                    sent_at=current_date
+                )
+            )
+            session.commit()
+    # 3.There should be table it the DB for the message reports,was the message seen/not send/send etc.(The table should look something like:
+    # bot acc - user we write to - the message we send - status of the message - counter for the messages sent to this acc).
+    def update_current_messages_state(self, username: str) -> None:
+
+        self.random_delay()
+        self.logger.info(f'Updating messages state for {repr(username)}')
+
+        with create_session() as session:
+
+            messages = session.query(Message).where(
+                Message.profile_id == self.account_id
+            ).where(Message.username == username).all()
+
+            try:
+                self._wait_for_element_visible(by='css selector', selector='.is-out .time-inner')
+                date_elements = self.driver.find_elements('css selector', '.is-out .time-inner')
+            except:
+                self._wait_for_element_visible(by='css selector', selector='.peer-color-count-1 .message-time')
+                date_elements = self.driver.find_elements('css selector', '.peer-color-count-1 .message-time')
+
+            for message in messages:
+
+                if message.state == 'read':
+                    continue
+
+                for date_element in date_elements:
+
+                    ActionChains(self.driver).move_to_element(date_element).perform()
+                    date = date_element.get_attribute('title')
+
+                    try:
+                        current_date = datetime.datetime.strptime(date, '%d %B %Y, %H:%M:%S')
+                    except:
+                        current_date = datetime.datetime.strptime(date, '%b %d, %Y, %H:%M:%S')
+
+                    try:
+                        checked_symbol = self._wait_for_element_visible(
+                            by='css selector', selector='.time-sending-status', extract_from=date_element
+                        ).text == '\ue901'
+                    except:
+                        checked_symbol = bool(self._wait_for_element_visible(
+                            by='xpath',
+                            selector='following-sibling::div[@class="MessageOutgoingStatus"]',
+                            extract_from=date_element
+                        ).find_element('css selector', 'i[class*="icon-message-read"]'))
+
+                    delta = datetime.timedelta(seconds=5)
+                    start_threshold = message.sent_at - delta
+                    end_threshold = message.sent_at + delta
+                    time_ok = start_threshold <= current_date <= end_threshold
+
+                    if time_ok and checked_symbol:
+                        message.state = 'read'
+                        break
+
+            self.logger.info(f'Messages state for {repr(username)} updated successfully')
+            session.commit()
+
+    # 3.There should be table it the DB for the message reports,was the message seen/not send/send etc.(The table should look something like:
+    # bot acc - user we write to - the message we send - status of the message - counter for the messages sent to this acc).
     @catch_logged_out
     @catch_timed_out
     @catch_limit_exceeded
-    def telegram_login_with_proxy(self):
+    def check_messages_state(self) -> None:
+
+        self.login_to_account()
+        self.driver.refresh()
+        self.update_bot_data()
+
+        while True:
+
+            with create_session() as session:
+                usernames = session.query(Message.username).where(
+                    Message.profile_id == self.account_id
+                ).where(Message.state == 'sent').all()
+
+            if len(usernames) == 0:
+                break
+
+            for username in usernames:
+                self.driver.refresh()
+                self.logger.info(f'Checking messages state for {repr(username)}')
+                username = username[0]
+                self.search_for_contact(username)
+                self.click_contact(username)
+                self.update_current_messages_state(username)
+                self.logger.info(f'Messages state for {repr(username)} checked successfully')
+
+            time.sleep(random.randint(60, 90))
+
+    # 3.There should be table it the DB for the message reports,was the message seen/not send/send etc.(The table should look something like:
+    # bot acc - user we write to - the message we send - status of the message - counter for the messages sent to this acc).
+    def login_to_account(self) -> None:
 
         self.driver.get('https://web.telegram.org/')
 
@@ -440,6 +576,33 @@ class Telegram:
             self.logger.info('Local storage file found')
             self.load_local_storage(self.local_storage_file_path)
             print("Local storage loaded successfully.")
+
+            try:
+                chatlist_selector = ".animated-menu-icon"
+                self.random_delay(15, 20)
+                self._wait_for_element_visible(chatlist_selector)
+
+            except (
+                    TimeoutException,
+                    NoSuchElementException,
+                    ElementNotVisibleException
+            ):
+                self.logger.info('Local storage file is outdated')
+                self.logger.info('Waiting for user to log in manually')
+                print("Please relog in manually.")
+
+                # Open Telegram web page for manual login
+                # self.driver.get('https://web.telegram.org/')
+
+                # Wait for user to log in manually, identified by the presence of the chat list
+                chatlist_selector = ".animated-menu-icon"
+                self._wait_for_element_visible(chatlist_selector, timeout=600)
+
+                # After manual login, save the local storage
+                self.random_delay(5, 10)
+                self.save_local_storage(self.local_storage_file_path)
+                print("Local storage saved successfully.")
+
         else:
             self.logger.info('Local storage file not found')
             self.logger.info('Waiting for user to log in manually')
@@ -450,6 +613,7 @@ class Telegram:
 
             # Wait for user to log in manually, identified by the presence of the chat list
             chatlist_selector = ".animated-menu-icon"
+            self.random_delay(5, 10)
             self._wait_for_element_visible(chatlist_selector, timeout=600)
 
             # After manual login, save the local storage
@@ -465,9 +629,20 @@ class Telegram:
             self.save_local_storage(self.local_storage_file_path)
             print("Local storage saved successfully.")
 
+    # 3.There should be table it the DB for the message reports,was the message seen/not send/send etc.(The table should look something like:
+    # bot acc - user we write to - the message we send - status of the message - counter for the messages sent to this acc).
+    @catch_logged_out
+    @catch_timed_out
+    @catch_limit_exceeded
+    def write_to_users(self):
+
+        self.login_to_account()
+        self.driver.refresh()
         self.update_bot_data()
 
         for user in self.users_list[:]:
             self.search_for_contact(user)
             self.click_contact(user)
             self.type_message_and_send(user)
+            self.save_current_message_state(user)
+            self.random_delay()
