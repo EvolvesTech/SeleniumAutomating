@@ -12,7 +12,6 @@ from pathlib import Path
 import logging
 
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException as NoSuchElementExceptionSE
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.remote.webelement import WebElement
@@ -29,7 +28,14 @@ from seleniumbase.common.exceptions import (
     TimeoutException
 )
 
-from db import create_session, ProfileLimit, Profile, Message
+from db import (
+    create_session,
+    ProfileLimit,
+    Profile,
+    Message,
+    create_or_update_report
+)
+
 
 _T = typing.TypeVar('_T')
 AnyFunction = typing.Callable[..., _T]
@@ -46,7 +52,9 @@ def catch_timed_out(function: AnyFunction) -> AnyFunction:
         try:
             return function(self, *args, **kwargs)
         except (TimeoutException, NoSuchElementException):
-            self.logger.error(f'Possibly, telegram is block or timing out for `account#{self.account_id}`')
+            message = f'Possibly, telegram is block or timing out for `account#{self.account_id}`'
+            self.logger.error(message)
+            create_or_update_report(profile_id=self.account_id, message=message)
             sys.exit(0)
     return wrapper
 
@@ -66,8 +74,10 @@ def catch_logged_out(function: AnyFunction) -> AnyFunction:
             pass
 
         except:
-            self.logger.error(f'Can\'t do actions in `account#{self.account_id}`. Possibly session expired.')
+            message = f'Can\'t do actions in `account#{self.account_id}`. Possibly session expired.'
+            self.logger.error(message)
             self.logger.error(traceback.format_exc())
+            create_or_update_report(profile_id=self.account_id, message=message)
             sys.exit(0)
     return wrapper
 
@@ -82,7 +92,9 @@ def catch_limit_exceeded(function: AnyFunction) -> AnyFunction:
         try:
             return function(self, *args, **kwargs)
         except LimitExceeded:
-            self.logger.error(f'Limit exceeded for `account#{self.account_id}`')
+            message = f'Limit exceeded for `account#{self.account_id}`'
+            self.logger.error(message)
+            create_or_update_report(profile_id=self.account_id, message=message)
             sys.exit(0)
     return wrapper
 
@@ -472,7 +484,7 @@ class Telegram:
                     message=self.message,
                     username=username,
                     state='sent',
-                    sent_at=current_date
+                    sent_at=current_date,
                 )
             )
             session.commit()

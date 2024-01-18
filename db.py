@@ -87,6 +87,16 @@ class Message(Base):
     username: Mapped[str] = mapped_column(nullable=False)
     sent_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
     state: Mapped[str] = mapped_column(nullable=False)
+    counter: Mapped[int] = mapped_column(default=1)
+
+
+class Report(Base):
+
+    __tablename__ = "reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    profile_id: Mapped[int] = mapped_column(nullable=False)
+    message: Mapped[str] = mapped_column(nullable=False)
 
 
 engine = create_engine(
@@ -97,6 +107,26 @@ Base.metadata.create_all(bind=engine)
 
 def create_session() -> Session:
     return Session(engine)
+
+
+def create_or_update_report(
+    profile_id: int,
+    message: str,
+) -> None:
+
+    with create_session() as session:
+        report = session.query(Report).where(
+            Report.profile_id == profile_id
+        ).first()
+        if report is None:
+            report = Report(
+                profile_id=profile_id,
+                message=message,
+            )
+            session.add(report)
+        else:
+            report.message = message
+        session.commit()
 
 
 def create_profile_if_not_exists(
